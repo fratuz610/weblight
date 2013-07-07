@@ -28,10 +28,8 @@ public abstract class WebLightModule extends AbstractModule
 
   protected void configure()
   {
-    bind(new TypeLiteral()
-    {
-    }).annotatedWith(WebLight.class).toInstance(_bindings);
-
+    bind(new TypeLiteral<List<PathBinding>>(){}).annotatedWith(WebLight.class).toInstance(_bindings);
+    
     configureWebLight();
 
     System.out.println("Bindings found: " + _bindings.size());
