@@ -17,7 +17,7 @@ public class URIPath
   {
     _pathExpression = pathExpression;
 
-    if ((pathExpression.indexOf("*") != -1) && (pathExpression.indexOf("*") != pathExpression.length() - 1)) {
+    if ((pathExpression.indexOf("*") != -1) && !pathExpression.endsWith("*")) {
       throw new IllegalArgumentException("If the path expression contains an *, it must be the last character");
     }
     String[] pathExprList = pathExpression.split("/");
@@ -36,8 +36,7 @@ public class URIPath
     }
   }
 
-  public List<InjectParam> matchAndParse(String actualPath)
-    throws IllegalArgumentException
+  public List<InjectParam> matchAndParse(String actualPath) throws IllegalArgumentException
   {
     String cursorPath = actualPath;
     String actualToken = null;
@@ -46,7 +45,7 @@ public class URIPath
     while (true)
     {
       if (StringUtils.isEmpty(cursorPath)) {
-        log.fine("Parsing complete");
+        log.info("Parsing complete");
         break;
       }
 
@@ -58,7 +57,7 @@ public class URIPath
         cursorPath = cursorPath.substring(cursorPath.indexOf("/") + 1);
       }
 
-      log.fine("actualToken: '" + actualToken + "' - remaining string: '" + cursorPath + "'");
+      log.info("actualToken: '" + actualToken + "' - remaining string: '" + cursorPath + "'");
 
       if (!"".equals(actualToken.trim()))
       {
@@ -70,10 +69,12 @@ public class URIPath
         if (!pathMatcher.matches(actualToken)) {
           throw new IllegalArgumentException("'" + actualToken + "' doesn't match " + pathMatcher.getClass().getSimpleName());
         }
-        log.fine("Positive match for " + actualToken + " by " + pathMatcher.getClass());
+        log.info("Positive match for " + actualToken + " by " + pathMatcher.getClass());
 
         if (pathMatcher.mustBeLast()) {
           actualToken = actualToken + "/" + cursorPath;
+          cursorPath = "";
+          log.info("mustBeLast: actualToken: '" + actualToken + "'");
         }
         if (pathMatcher.getInjectParam(actualToken) != null) {
           injectParamList.add(pathMatcher.getInjectParam(actualToken));
