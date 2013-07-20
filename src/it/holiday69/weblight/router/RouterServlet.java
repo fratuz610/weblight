@@ -35,8 +35,8 @@ public class RouterServlet extends HttpServlet
   List<WebLightModule.PathBinding> _pathBindingList;
   private Map<URIPath, RouterFilterChain> _routingMap = new HashMap();
 
-  public void init(ServletConfig config)
-    throws ServletException
+  @Override
+  public void init(ServletConfig config) throws ServletException
   {
     for (WebLightModule.PathBinding pathBinding : _pathBindingList) {
       _log.info("Adding bindingd for " + pathBinding.getPathExpression() + " " + pathBinding.getFilterClassList().size() + " filters and " + pathBinding.getServletClass() + " servlet");
@@ -46,28 +46,25 @@ public class RouterServlet extends HttpServlet
     _log.info("Processed: " + _pathBindingList.size() + " path bindings");
   }
 
-  public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException
-  {
-    handle(req, resp);
-  }
+  @Override
+  public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException { handle(req, resp); }
+  @Override
   public void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException { handle(req, resp); } 
-  public void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-    handle(req, resp);
-  }
+  @Override
+  public void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException { handle(req, resp); }
+  @Override
   public void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException { handle(req, resp); } 
-  public void doHead(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-    handle(req, resp);
-  }
+  @Override
+  public void doHead(HttpServletRequest req, HttpServletResponse resp) throws IOException { handle(req, resp); }
+  @Override
   public void doOptions(HttpServletRequest req, HttpServletResponse resp) throws IOException { handle(req, resp); }
 
-
-  private void handle(HttpServletRequest req, HttpServletResponse resp)
-    throws IOException
+  private void handle(HttpServletRequest req, HttpServletResponse resp) throws IOException
   {
     _log.fine("Got a request for: " + req.getRequestURI());
 
-    for (URIPath uriPath : _routingMap.keySet())
-    {
+    for (URIPath uriPath : _routingMap.keySet()) {
+      
       _log.fine("Analizing uriPath: " + uriPath);
 		  
 		  List<InjectParam> injectParamList = null;

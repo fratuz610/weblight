@@ -2,13 +2,9 @@ package it.holiday69.weblight;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
-import com.google.inject.binder.AnnotatedBindingBuilder;
-import com.google.inject.binder.LinkedBindingBuilder;
 import com.google.inject.servlet.ServletModule;
-import com.google.inject.servlet.ServletModule.ServletKeyBindingBuilder;
 import it.holiday69.weblight.anno.WebLight;
 import it.holiday69.weblight.router.RouterServlet;
-import java.io.PrintStream;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
