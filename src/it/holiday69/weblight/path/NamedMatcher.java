@@ -18,9 +18,9 @@ public class NamedMatcher
     return true;
   }
 
-  public InjectParam getInjectParam(String value)
+  public IntRouteParam getInjectParam(String value)
   {
-    return new InjectParam(_variableName, value);
+    return new IntRouteParam(_variableName, value);
   }
 
   public boolean mustBeLast() {

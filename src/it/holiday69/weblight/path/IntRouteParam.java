@@ -1,11 +1,11 @@
 package it.holiday69.weblight.path;
 
-public class InjectParam
+public class IntRouteParam
 {
   private String _key;
   private Object _value;
 
-  public InjectParam(String key, Object value)
+  public IntRouteParam(String key, Object value)
   {
     _key = key;
     _value = value;
@@ -13,5 +13,6 @@ public class InjectParam
   public String getKey() {
     return _key; } 
   public Object getValue() { return _value; }
+  public String getValueAsString() { return (String) _value; }
 
 }

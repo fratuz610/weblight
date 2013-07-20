@@ -1,8 +1,10 @@
 package it.holiday69.weblight.path;
 
 import it.holiday69.weblight.repackaged.StringUtils;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class URIPath
@@ -36,12 +38,13 @@ public class URIPath
     }
   }
 
-  public List<InjectParam> matchAndParse(String actualPath) throws IllegalArgumentException
+  public Map<String, String> matchAndParse(String actualPath) throws IllegalArgumentException
   {
     String cursorPath = actualPath;
     String actualToken = null;
     List pathMatcherCopyList = new LinkedList(_matcherList);
-    List injectParamList = new LinkedList();
+    Map<String,String> retParamMap = new HashMap<String, String>();
+    
     while (true)
     {
       if (StringUtils.isEmpty(cursorPath)) {
@@ -77,14 +80,14 @@ public class URIPath
           log.fine("mustBeLast: actualToken: '" + actualToken + "'");
         }
         if (pathMatcher.getInjectParam(actualToken) != null) {
-          injectParamList.add(pathMatcher.getInjectParam(actualToken));
+          retParamMap.put(pathMatcher.getInjectParam(actualToken).getKey(), pathMatcher.getInjectParam(actualToken).getValueAsString());
         }
       }
     }
     if (!pathMatcherCopyList.isEmpty()) {
       throw new IllegalArgumentException("Partial match");
     }
-    return injectParamList;
+    return retParamMap;
   }
   public String getPathExpression() {
     return _pathExpression;

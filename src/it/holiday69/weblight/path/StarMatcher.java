@@ -1,8 +1,5 @@
 package it.holiday69.weblight.path;
 
-import java.util.Arrays;
-import java.util.List;
-
 public class StarMatcher
   implements PathMatcher
 {
@@ -13,10 +10,9 @@ public class StarMatcher
   }
 
   @Override
-  public InjectParam getInjectParam(String value)
+  public IntRouteParam getInjectParam(String value)
   {
-    List uriList = Arrays.asList(value.split("/"));
-    return new InjectParam("uriList", uriList);
+    return null;
   }
 
   @Override

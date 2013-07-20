@@ -3,10 +3,12 @@ package it.holiday69.weblight.router;
 import com.google.inject.Injector;
 import it.holiday69.weblight.anno.Header;
 import it.holiday69.weblight.anno.ReqParam;
+import it.holiday69.weblight.anno.RouteParam;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 import javax.servlet.Filter;
@@ -88,6 +90,8 @@ public class RouterFilterChain implements FilterChain
   private void scanAndInject(Object obj, HttpServletRequest req) {
     
     Class<?> clazz = obj.getClass();
+    
+    Map<String, String> routeParamMap = (Map<String, String>) req.getAttribute("__routeParamMap__");
       
     for(Field field : clazz.getDeclaredFields()) {
       
@@ -115,7 +119,7 @@ public class RouterFilterChain implements FilterChain
         }
       }
       
-      // parameters
+      // request parameters
       if(field.isAnnotationPresent(ReqParam.class)) {
         
         ReqParam reqParamAnno = field.getAnnotation(ReqParam.class);
@@ -123,6 +127,40 @@ public class RouterFilterChain implements FilterChain
         String paramName = reqParamAnno.value() != null?reqParamAnno.value():field.getName();
         
         String paramValue = req.getParameter(paramName);
+        
+        // if we have a param with matching name
+        if(paramValue != null) {
+          
+          try {
+            if(field.getType() == int.class || field.getType() == Integer.class) {
+              field.set(obj, Integer.parseInt(paramValue));
+            } else if(field.getType() == String.class) {
+              field.set(obj, paramValue);
+            } else if(field.getType() == long.class || field.getType() == Long.class) {
+              field.set(obj, Long.parseLong(paramValue));
+            } else if(field.getType() == float.class || field.getType() == Float.class) {
+              field.set(obj, Float.parseFloat(paramValue));
+            } else if(field.getType() == double.class || field.getType() == Double.class) {
+              field.set(obj, Double.parseDouble(paramValue));
+            } else if(field.getType() == boolean.class || field.getType() == Boolean.class) {
+              field.set(obj, Boolean.parseBoolean(paramName));
+            }
+          } catch(Throwable th) { 
+            // smth went wrong
+          }
+          
+        }
+        
+      }
+      
+      // route parameters
+      if(field.isAnnotationPresent(RouteParam.class)) {
+        
+        RouteParam reqParamAnno = field.getAnnotation(RouteParam.class);
+        
+        String paramName = reqParamAnno.value() != null?reqParamAnno.value():field.getName();
+        
+        String paramValue = routeParamMap.get(paramName);
         
         // if we have a param with matching name
         if(paramValue != null) {

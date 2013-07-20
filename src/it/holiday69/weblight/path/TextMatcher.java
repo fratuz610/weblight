@@ -22,7 +22,7 @@ public class TextMatcher
     return false;
   }
 
-  public InjectParam getInjectParam(String value) {
+  public IntRouteParam getInjectParam(String value) {
     return null;
   }
 

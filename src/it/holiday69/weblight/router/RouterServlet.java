@@ -3,16 +3,13 @@ package it.holiday69.weblight.router;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import it.holiday69.weblight.WebLightModule;
-import it.holiday69.weblight.WebLightModule.PathBinding;
 import it.holiday69.weblight.anno.WebLight;
-import it.holiday69.weblight.path.InjectParam;
 import it.holiday69.weblight.path.URIPath;
 import it.holiday69.weblight.repackaged.ExceptionUtils;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.logging.Logger;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -33,6 +30,7 @@ public class RouterServlet extends HttpServlet
   @Inject
   @WebLight
   List<WebLightModule.PathBinding> _pathBindingList;
+  
   private Map<URIPath, RouterFilterChain> _routingMap = new HashMap();
 
   @Override
@@ -67,18 +65,22 @@ public class RouterServlet extends HttpServlet
       
       _log.fine("Analizing uriPath: " + uriPath);
 		  
-		  List<InjectParam> injectParamList = null;
+		  Map<String, String> routeParamMap = new HashMap<String, String>();
 		  try {
-			  injectParamList = uriPath.matchAndParse(req.getRequestURI());
+			  routeParamMap = uriPath.matchAndParse(req.getRequestURI());
 		  } catch(IllegalArgumentException ex) {
 			  _log.fine("No match for '" + req.getRequestURI() + "' => " + ex.getMessage());
 			  continue;
 		  }
 		  
-		  for(InjectParam injectParam : injectParamList) {
-			  _log.fine("Injecting " + injectParam.getKey() + " => " + injectParam.getValue());
-			  req.setAttribute(injectParam.getKey(), injectParam.getValue());
+		  for(String routeParamKey : routeParamMap.keySet()) {
+        String routeParamValue = routeParamMap.get(routeParamKey);
+        
+			  _log.fine("Injecting " + routeParamKey + " => " + routeParamValue);
+			  req.setAttribute(routeParamKey, routeParamValue);
 		  }
+      
+      req.setAttribute("__routeParamMap__", routeParamMap);
 		  
 		  RouterFilterChain chain = _routingMap.get(uriPath);
 		  
