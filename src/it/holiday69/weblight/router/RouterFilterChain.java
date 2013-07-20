@@ -22,7 +22,6 @@ public class RouterFilterChain implements FilterChain
   private Logger _log = Logger.getLogger(RouterFilterChain.class.getSimpleName());
   private Set<Class<? extends Filter>> _filterClassList;
   private Class<? extends HttpServlet> _servletClass;
-  private HttpServlet _servletInstance = null;
   private Injector _injector;
 
   public RouterFilterChain(Set<Class<? extends Filter>> filterClassList, Class<? extends HttpServlet> servletClass, Injector injector)
@@ -68,7 +67,7 @@ public class RouterFilterChain implements FilterChain
         workingFilterList.add(filter);
       }
       
-      servReq.setAttribute("__servletInstance__", workingFilterList);
+      servReq.setAttribute("__workingFilterList__", workingFilterList);
     }
     
     if (!workingFilterList.isEmpty()) {
@@ -82,7 +81,7 @@ public class RouterFilterChain implements FilterChain
     } else {
       _log.fine("No more filters to process, serving the servlet");
       servReq.setAttribute("__workingFilterList__", null);
-      _servletInstance.service(servReq, servResp);
+      servlet.service(servReq, servResp);
     }
   }
   
@@ -91,7 +90,10 @@ public class RouterFilterChain implements FilterChain
     Class<?> clazz = obj.getClass();
       
     for(Field field : clazz.getDeclaredFields()) {
-
+      
+      // allow access to private fields
+      field.setAccessible(true); 
+      
       // headers
       if(field.isAnnotationPresent(Header.class)) {
 
