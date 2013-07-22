@@ -80,7 +80,7 @@ public class RouterServlet extends HttpServlet
 			  req.setAttribute(routeParamKey, routeParamValue);
 		  }
       
-      req.setAttribute("__routeParamMap__", routeParamMap);
+      req.setAttribute(RouterFilterChain.ROUTE_PARAM_MAP_KEY, routeParamMap);
 		  
 		  RouterFilterChain chain = _routingMap.get(uriPath);
 		  

@@ -22,6 +22,10 @@ public class ValueStack {
     _map.put(key, value);
   }
   
+  public Object getUntyped(String key) {
+    return _map.get(key);
+  }
+  
   public <T> T get(String key, Class<T> classOfT) {
     return classOfT.cast(_map.get(key));
   }

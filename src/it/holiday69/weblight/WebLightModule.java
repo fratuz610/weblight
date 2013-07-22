@@ -22,6 +22,7 @@ public abstract class WebLightModule extends AbstractModule
     _bindings = new LinkedList();
   }
 
+  @Override
   protected void configure()
   {
     bind(new TypeLiteral<List<PathBinding>>(){}).annotatedWith(WebLight.class).toInstance(_bindings);
@@ -32,8 +33,10 @@ public abstract class WebLightModule extends AbstractModule
 
     install(new ServletModule()
     {
+      @Override
       protected void configureServlets() {
         bind(RouterServlet.class).in(Singleton.class);
+                
         serveRegex("^(/[^_]).*", new String[0]).with(RouterServlet.class);
       }
     });

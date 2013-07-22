@@ -7,7 +7,8 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ValueStack
+public @interface Attribute
 {
-  
+  public abstract String value() default "";
+  public abstract boolean mandatory() default true;
 }

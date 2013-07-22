@@ -4,6 +4,8 @@ import com.google.inject.Injector;
 import it.holiday69.weblight.anno.Header;
 import it.holiday69.weblight.anno.ReqParam;
 import it.holiday69.weblight.anno.RouteParam;
+import it.holiday69.weblight.anno.Attribute;
+import it.holiday69.weblight.repackaged.StringUtils;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.LinkedList;
@@ -21,6 +23,11 @@ import javax.servlet.http.HttpServletRequest;
 
 public class RouterFilterChain implements FilterChain
 {
+  
+  public final static String SERVLET_INSTANCE_KEY = "__servletInstance__";
+  public final static String WORKING_FILTER_LIST_KEY = "__workingFilterList__";
+  public final static String ROUTE_PARAM_MAP_KEY = "__routeParamMap__";
+  
   private Logger _log = Logger.getLogger(RouterFilterChain.class.getSimpleName());
   private Set<Class<? extends Filter>> _filterClassList;
   private Class<? extends HttpServlet> _servletClass;
@@ -36,16 +43,9 @@ public class RouterFilterChain implements FilterChain
   @Override
   public void doFilter(ServletRequest servReq, ServletResponse servResp) throws IOException, ServletException
   {
-    
-    ValueStack valueStack = (ValueStack) servReq.getAttribute("__valueStack__");
-    
-    if(valueStack == null) {
-      valueStack = new ValueStack();
-      servReq.setAttribute("__valueStack__", valueStack);
-    }
-    
+   
     // we get the servlet instance from the request
-    HttpServlet servlet = (HttpServlet) servReq.getAttribute("__servletInstance__");
+    HttpServlet servlet = (HttpServlet) servReq.getAttribute(SERVLET_INSTANCE_KEY);
     
     // if none we istanciate and inject values
     if(servlet == null) {
@@ -54,11 +54,11 @@ public class RouterFilterChain implements FilterChain
       // we inject headers and parameters
       injectRequestParams(servlet, (HttpServletRequest) servReq);
       
-      servReq.setAttribute("__servletInstance__", servlet);
+      servReq.setAttribute(SERVLET_INSTANCE_KEY, servlet);
     }
     
     // we get the list of filters from the request
-    List<Filter> workingFilterList = (List<Filter>)servReq.getAttribute("__workingFilterList__");
+    List<Filter> workingFilterList = (List<Filter>)servReq.getAttribute(WORKING_FILTER_LIST_KEY);
     
     if (workingFilterList == null) {
       
@@ -76,21 +76,61 @@ public class RouterFilterChain implements FilterChain
         workingFilterList.add(filter);
       }
       
-      servReq.setAttribute("__workingFilterList__", workingFilterList);
+      servReq.setAttribute(WORKING_FILTER_LIST_KEY, workingFilterList);
     }
     
     if (!workingFilterList.isEmpty()) {
       _log.fine("Working filter has: " + workingFilterList.size() + " elements");
 
       Filter filter = (Filter)workingFilterList.remove(0);
-      servReq.setAttribute("__workingFilterList__", workingFilterList);
-
+      servReq.setAttribute(WORKING_FILTER_LIST_KEY, workingFilterList);
+      
+      // updates the attributes
+      injectAttributes(filter, (HttpServletRequest) servReq);
+      
       _log.fine("Applying filter: " + filter.getClass());
       filter.doFilter(servReq, servResp, this);
     } else {
       _log.fine("No more filters to process, serving the servlet");
-      servReq.setAttribute("__workingFilterList__", null);
+      servReq.setAttribute(WORKING_FILTER_LIST_KEY, null);
+      
+      // updates the attributes
+      injectAttributes(servlet, (HttpServletRequest) servReq);
+      
       servlet.service(servReq, servResp);
+    }
+  }
+  
+  private void injectAttributes(Object obj, HttpServletRequest req) {
+    
+    Class<?> clazz = obj.getClass();
+      
+    for(Field field : clazz.getDeclaredFields()) {
+      
+      // allow access to private fields
+      field.setAccessible(true); 
+      
+      // Attributes
+      if(field.isAnnotationPresent(Attribute.class)) {
+        
+        Attribute attribAnno = field.getAnnotation(Attribute.class);
+        
+        String attribKey = StringUtils.hasContent(attribAnno.value())?attribAnno.value():field.getName();
+        
+        Object attribValue = req.getAttribute(attribKey);
+        
+        if(attribValue == null)
+          continue;
+        
+        try {
+          field.set(obj, attribValue);
+        } catch(Throwable th) {
+          if(!field.getType().isAssignableFrom(attribValue.getClass()))
+            throw new RuntimeException("Field " + field.getName() + " of type " + field.getType() + "  is not assignable from " + attribValue.getClass());
+          else
+            throw new RuntimeException(th);
+        }
+      }
     }
   }
     
@@ -98,8 +138,7 @@ public class RouterFilterChain implements FilterChain
     
     Class<?> clazz = obj.getClass();
     
-    Map<String, String> routeParamMap = (Map<String, String>) req.getAttribute("__routeParamMap__");
-    ValueStack valueStack = (ValueStack) req.getAttribute("__valueStack__");
+    Map<String, String> routeParamMap = (Map<String, String>) req.getAttribute(ROUTE_PARAM_MAP_KEY);
       
     for(Field field : clazz.getDeclaredFields()) {
       
@@ -110,11 +149,13 @@ public class RouterFilterChain implements FilterChain
       if(field.isAnnotationPresent(Header.class)) {
 
         if(field.getType() != String.class)
-          throw new RuntimeException("Field " + field.getName() + " is annotated with @Header but it's not a String: " + field.getType());
+          throw new RuntimeException("Only String fields can be annotated with @Header. '" + field.getName() + "' is annotated with @Header but it's an instance of " + field.getType());
 
         Header headerAnno = field.getAnnotation(Header.class);
         
-        String headerValue = req.getHeader(headerAnno.value());
+        String headerName = StringUtils.hasContent(headerAnno.value())?headerAnno.value():field.getName();
+        
+        String headerValue = req.getHeader(headerName);
         
         if(headerValue != null) {
           
@@ -132,78 +173,53 @@ public class RouterFilterChain implements FilterChain
         
         ReqParam reqParamAnno = field.getAnnotation(ReqParam.class);
         
-        String paramName = reqParamAnno.value() != null?reqParamAnno.value():field.getName();
+        String paramName = StringUtils.hasContent(reqParamAnno.value())?reqParamAnno.value():field.getName();
         
         String paramValue = req.getParameter(paramName);
         
         // if we have a param with matching name
-        if(paramValue != null) {
-          
-          try {
-            if(field.getType() == int.class || field.getType() == Integer.class) {
-              field.set(obj, Integer.parseInt(paramValue));
-            } else if(field.getType() == String.class) {
-              field.set(obj, paramValue);
-            } else if(field.getType() == long.class || field.getType() == Long.class) {
-              field.set(obj, Long.parseLong(paramValue));
-            } else if(field.getType() == float.class || field.getType() == Float.class) {
-              field.set(obj, Float.parseFloat(paramValue));
-            } else if(field.getType() == double.class || field.getType() == Double.class) {
-              field.set(obj, Double.parseDouble(paramValue));
-            } else if(field.getType() == boolean.class || field.getType() == Boolean.class) {
-              field.set(obj, Boolean.parseBoolean(paramName));
-            }
-          } catch(Throwable th) { 
-            // smth went wrong
-          }
-          
-        }
+        if(paramValue != null)
+          assignField(obj, field, paramValue);
         
       }
       
       // route parameters
       if(field.isAnnotationPresent(RouteParam.class)) {
         
-        RouteParam reqParamAnno = field.getAnnotation(RouteParam.class);
+        RouteParam routeParamAnno = field.getAnnotation(RouteParam.class);
         
-        String paramName = reqParamAnno.value() != null?reqParamAnno.value():field.getName();
+        String paramName = StringUtils.hasContent(routeParamAnno.value())?routeParamAnno.value():field.getName();
         
         String paramValue = routeParamMap.get(paramName);
         
         // if we have a param with matching name
-        if(paramValue != null) {
-          
-          try {
-            if(field.getType() == int.class || field.getType() == Integer.class) {
-              field.set(obj, Integer.parseInt(paramValue));
-            } else if(field.getType() == String.class) {
-              field.set(obj, paramValue);
-            } else if(field.getType() == long.class || field.getType() == Long.class) {
-              field.set(obj, Long.parseLong(paramValue));
-            } else if(field.getType() == float.class || field.getType() == Float.class) {
-              field.set(obj, Float.parseFloat(paramValue));
-            } else if(field.getType() == double.class || field.getType() == Double.class) {
-              field.set(obj, Double.parseDouble(paramValue));
-            } else if(field.getType() == boolean.class || field.getType() == Boolean.class) {
-              field.set(obj, Boolean.parseBoolean(paramName));
-            }
-          } catch(Throwable th) { 
-            // smth went wrong
-          }
-          
-        }
+        if(paramValue != null)
+          assignField(obj, field, paramValue);
         
-      }
-      
-      // value stack
-      if(field.getType() == ValueStack.class) {
-        try {
-          field.set(obj, valueStack);
-        } catch(Throwable th) { }
       }
       
     }
     
+  }
+  
+  private void assignField(Object obj, Field field, String stringValue ){
+    try {
+      if(field.getType() == int.class || field.getType() == Integer.class) {
+        field.set(obj, Integer.parseInt(stringValue));
+      } else if(field.getType() == String.class) {
+        field.set(obj, stringValue);
+      } else if(field.getType() == long.class || field.getType() == Long.class) {
+        field.set(obj, Long.parseLong(stringValue));
+      } else if(field.getType() == float.class || field.getType() == Float.class) {
+        field.set(obj, Float.parseFloat(stringValue));
+      } else if(field.getType() == double.class || field.getType() == Double.class) {
+        field.set(obj, Double.parseDouble(stringValue));
+      } else if(field.getType() == boolean.class || field.getType() == Boolean.class) {
+        field.set(obj, Boolean.parseBoolean(stringValue));
+      }
+    } catch(Throwable th) { 
+      // smth went wrong
+    }
   }
 
   @Override
