@@ -2,7 +2,6 @@ package it.holiday69.weblight.router.reply;
 
 import it.holiday69.weblight.router.inte.Template;
 import java.io.IOException;
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 
 public class Reply<T>

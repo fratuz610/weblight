@@ -37,6 +37,13 @@ public class RouterFilterChain implements FilterChain
   public void doFilter(ServletRequest servReq, ServletResponse servResp) throws IOException, ServletException
   {
     
+    ValueStack valueStack = (ValueStack) servReq.getAttribute("__valueStack__");
+    
+    if(valueStack == null) {
+      valueStack = new ValueStack();
+      servReq.setAttribute("__valueStack__", valueStack);
+    }
+    
     // we get the servlet instance from the request
     HttpServlet servlet = (HttpServlet) servReq.getAttribute("__servletInstance__");
     
@@ -45,7 +52,7 @@ public class RouterFilterChain implements FilterChain
       servlet = (HttpServlet)_injector.getInstance(_servletClass);
       
       // we inject headers and parameters
-      scanAndInject(servlet, (HttpServletRequest) servReq);
+      injectRequestParams(servlet, (HttpServletRequest) servReq);
       
       servReq.setAttribute("__servletInstance__", servlet);
     }
@@ -61,7 +68,7 @@ public class RouterFilterChain implements FilterChain
         Filter filter = (Filter)_injector.getInstance(filterClass);
         
         // we inject other parameters (headers and params)
-        scanAndInject(filter, (HttpServletRequest) servReq);
+        injectRequestParams(filter, (HttpServletRequest) servReq);
         
         if (filter == null)
           throw new RuntimeException("Unable to get an instance for class " + filterClass);
@@ -86,12 +93,13 @@ public class RouterFilterChain implements FilterChain
       servlet.service(servReq, servResp);
     }
   }
-  
-  private void scanAndInject(Object obj, HttpServletRequest req) {
+    
+  private void injectRequestParams(Object obj, HttpServletRequest req) {
     
     Class<?> clazz = obj.getClass();
     
     Map<String, String> routeParamMap = (Map<String, String>) req.getAttribute("__routeParamMap__");
+    ValueStack valueStack = (ValueStack) req.getAttribute("__valueStack__");
       
     for(Field field : clazz.getDeclaredFields()) {
       
@@ -185,6 +193,13 @@ public class RouterFilterChain implements FilterChain
           
         }
         
+      }
+      
+      // value stack
+      if(field.getType() == ValueStack.class) {
+        try {
+          field.set(obj, valueStack);
+        } catch(Throwable th) { }
       }
       
     }
