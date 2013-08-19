@@ -29,15 +29,13 @@ public abstract class WebLightModule extends AbstractModule
     
     configureWebLight();
 
-    System.out.println("Bindings found: " + _bindings.size());
-
     install(new ServletModule()
     {
       @Override
       protected void configureServlets() {
         bind(RouterServlet.class).in(Singleton.class);
                 
-        serveRegex("^(/[^_]).*", new String[0]).with(RouterServlet.class);
+        serveRegex("^(/[^_]).*").with(RouterServlet.class);
       }
     });
   }

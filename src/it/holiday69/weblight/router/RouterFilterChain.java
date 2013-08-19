@@ -1,11 +1,14 @@
 package it.holiday69.weblight.router;
 
+import com.google.gson.Gson;
 import com.google.inject.Injector;
 import it.holiday69.weblight.anno.Header;
 import it.holiday69.weblight.anno.ReqParam;
 import it.holiday69.weblight.anno.RouteParam;
 import it.holiday69.weblight.anno.Attribute;
+import it.holiday69.weblight.anno.RawInput;
 import it.holiday69.weblight.repackaged.StringUtils;
+import it.holiday69.weblight.utils.IOHelper;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.LinkedList;
@@ -196,6 +199,35 @@ public class RouterFilterChain implements FilterChain
         if(paramValue != null)
           assignField(obj, field, paramValue);
         
+      }
+      
+      // raw request parameter
+      if(field.isAnnotationPresent(RawInput.class)) {
+        
+        RawInput rawInputAnno = field.getAnnotation(RawInput.class);
+        
+        if(StringUtils.isEmpty(rawInputAnno.value())) {
+          
+          // no input type specified, defaulting to byte array or string
+          if(field.getType() != byte[].class && field.getType() != String.class)
+            throw new RuntimeException("Fields annotated with @RawInput and no input type must be either of type byte[] or String. Found: '" + field.getType() + "'");
+
+          try {
+            if(field.getType() == byte[].class)
+              field.set(obj, new IOHelper().readAsByteArray(req.getInputStream()));
+            else if(field.getType() == String.class)
+              field.set(obj, new IOHelper().readAsString(req.getInputStream()));
+          } catch(Throwable th) {
+            // smth went wrong
+          }        
+        } else if("json".equalsIgnoreCase(rawInputAnno.value())) {
+          
+          try {
+            field.set(obj, new Gson().fromJson(new IOHelper().readAsString(req.getInputStream()), field.getType()));
+          } catch(Throwable th) {
+            // smth went wrong
+          } 
+        }
       }
       
     }
