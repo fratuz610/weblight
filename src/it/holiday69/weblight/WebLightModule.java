@@ -4,6 +4,8 @@ import com.google.inject.AbstractModule;
 import com.google.inject.TypeLiteral;
 import com.google.inject.servlet.ServletModule;
 import it.holiday69.weblight.anno.WebLight;
+import it.holiday69.weblight.model.AttributeNames;
+import it.holiday69.weblight.router.RouterFilter;
 import it.holiday69.weblight.router.RouterServlet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
@@ -34,8 +36,12 @@ public abstract class WebLightModule extends AbstractModule
       @Override
       protected void configureServlets() {
         bind(RouterServlet.class).in(Singleton.class);
-                
-        serveRegex("^(/[^_]).*").with(RouterServlet.class);
+        bind(RouterFilter.class).in(Singleton.class);
+        bind(AttributeNames.class).in(Singleton.class);
+        
+        filterRegex("/.*").through(RouterFilter.class);
+        //serveRegex("^(/[^_]).*").with(RouterServlet.class);
+        //serveRegex("/.*").with(RouterServlet.class);
       }
     });
   }
@@ -63,12 +69,10 @@ public abstract class WebLightModule extends AbstractModule
 
     public void serveWith(Class<? extends HttpServlet> servletClass) {
       _servletClass = servletClass;
-
       _bindings.add(this);
     }
 
-    public String getPathExpression() {
-      return _pathExpression; } 
+    public String getPathExpression() { return _pathExpression; } 
     public Set<Class<? extends Filter>> getFilterClassList() { return _filterClassList; } 
     public Class<? extends HttpServlet> getServletClass() { return _servletClass; }
 

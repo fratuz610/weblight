@@ -12,13 +12,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-import javax.servlet.ServletConfig;
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
-import javax.servlet.http.HttpServlet;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-public class RouterServlet extends HttpServlet
+public class RouterFilter implements Filter
 {
   private static final long serialVersionUID = 1197202853654328800L;
 
@@ -30,10 +33,9 @@ public class RouterServlet extends HttpServlet
   private Map<URIPath, RouterFilterChain> _routingMap = new HashMap();
 
   @Override
-  public void init(ServletConfig config) throws ServletException
-  {
+  public void init(FilterConfig filterConfig) throws ServletException {
     for (WebLightModule.PathBinding pathBinding : _pathBindingList) {
-      _log.info("Adding bindingd for " + pathBinding.getPathExpression() + " " + pathBinding.getFilterClassList().size() + " filters and " + pathBinding.getServletClass() + " servlet");
+      _log.info("Adding binding for " + pathBinding.getPathExpression() + " " + pathBinding.getFilterClassList().size() + " filters and " + pathBinding.getServletClass() + " servlet");
       _routingMap.put(new URIPath(pathBinding.getPathExpression()), new RouterFilterChain(pathBinding.getFilterClassList(), pathBinding.getServletClass(), _injector));
     }
     
@@ -41,20 +43,11 @@ public class RouterServlet extends HttpServlet
   }
 
   @Override
-  public void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp); }
-  @Override
-  public void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp); } 
-  @Override
-  public void doPut(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp); }
-  @Override
-  public void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp); } 
-  @Override
-  public void doHead(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp); }
-  @Override
-  public void doOptions(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException { handle(req, resp); }
-
-  private void handle(HttpServletRequest req, HttpServletResponse resp) throws IOException, ServletException
-  {
+  public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+    
+    HttpServletRequest req = (HttpServletRequest) request;
+    HttpServletResponse resp = (HttpServletResponse) response;
+    
     _log.fine("Got a request for: " + req.getRequestURI());
 
     for (URIPath uriPath : _routingMap.keySet()) {
@@ -76,12 +69,12 @@ public class RouterServlet extends HttpServlet
       
       req.setAttribute(_attribNames.getRouteParamMapKey(), routeParamMap);
 		  
-		  RouterFilterChain chain = _routingMap.get(uriPath);
+		  RouterFilterChain internalChain = _routingMap.get(uriPath);
 		  
-		  _log.fine("Positive match for '"+req.getRequestURI()+"'. Routing through " + chain.toString());
+		  _log.fine("Positive match for '"+req.getRequestURI()+"'. Routing through " + internalChain.toString());
 		  
 		  try {
-			  chain.doFilter(req, resp);
+			  internalChain.doFilter(req, resp);
 		  } catch(ServletException ex) {
 			  _log.warning("Filter exception: " + ExceptionUtils.getDisplableExceptionInfo(ex));
 			  resp.setStatus(500);
@@ -102,7 +95,15 @@ public class RouterServlet extends HttpServlet
     _log.fine("The request for '"+req.getRequestURI()+"' didn't match any route, ignoring it");
     req.setAttribute(_attribNames.getForwardedKey(), req.getRequestURI());
     
-    // we forward the request to the app server
-    //req.getRequestDispatcher(req.getRequestURI()).forward(req, resp);
+    // we let the app server handle this request
+    chain.doFilter(request, response);
+    
+    _log.fine("After filter chain: '"+req.getRequestURI()+"'");
   }
+
+  @Override
+  public void destroy() {
+    // nothing to do
+  }
+  
 }

@@ -48,7 +48,7 @@ public class URIPath
     while (true)
     {
       if (StringUtils.isEmpty(cursorPath)) {
-        log.fine("Parsing complete");
+        log.finer("Parsing complete");
         break;
       }
 
@@ -60,7 +60,7 @@ public class URIPath
         cursorPath = cursorPath.substring(cursorPath.indexOf("/") + 1);
       }
 
-      log.fine("actualToken: '" + actualToken + "' - remaining string: '" + cursorPath + "'");
+      log.finer("actualToken: '" + actualToken + "' - remaining string: '" + cursorPath + "'");
 
       if (!"".equals(actualToken.trim()))
       {
@@ -72,12 +72,12 @@ public class URIPath
         if (!pathMatcher.matches(actualToken)) {
           throw new IllegalArgumentException("'" + actualToken + "' doesn't match " + pathMatcher.getClass().getSimpleName());
         }
-        log.fine("Positive match for " + actualToken + " by " + pathMatcher.getClass());
+        log.finer("Positive match for " + actualToken + " by " + pathMatcher.getClass());
 
         if (pathMatcher.mustBeLast()) {
           actualToken = actualToken + "/" + cursorPath;
           cursorPath = "";
-          log.fine("mustBeLast: actualToken: '" + actualToken + "'");
+          log.finer("mustBeLast: actualToken: '" + actualToken + "'");
         }
         if (pathMatcher.getInjectParam(actualToken) != null) {
           retParamMap.put(pathMatcher.getInjectParam(actualToken).getKey(), pathMatcher.getInjectParam(actualToken).getValueAsString());

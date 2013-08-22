@@ -7,6 +7,7 @@ import it.holiday69.weblight.anno.ReqParam;
 import it.holiday69.weblight.anno.RouteParam;
 import it.holiday69.weblight.anno.Attribute;
 import it.holiday69.weblight.anno.RawInput;
+import it.holiday69.weblight.model.AttributeNames;
 import it.holiday69.weblight.repackaged.StringUtils;
 import it.holiday69.weblight.utils.IOHelper;
 import java.io.IOException;
@@ -27,20 +28,18 @@ import javax.servlet.http.HttpServletRequest;
 public class RouterFilterChain implements FilterChain
 {
   
-  public final static String SERVLET_INSTANCE_KEY = "__servletInstance__";
-  public final static String WORKING_FILTER_LIST_KEY = "__workingFilterList__";
-  public final static String ROUTE_PARAM_MAP_KEY = "__routeParamMap__";
-  
   private Logger _log = Logger.getLogger(RouterFilterChain.class.getSimpleName());
   private Set<Class<? extends Filter>> _filterClassList;
   private Class<? extends HttpServlet> _servletClass;
   private Injector _injector;
+  private AttributeNames _attributeNames;
 
   public RouterFilterChain(Set<Class<? extends Filter>> filterClassList, Class<? extends HttpServlet> servletClass, Injector injector)
   {
     _filterClassList = filterClassList;
     _servletClass = servletClass;
     _injector = injector;
+    _attributeNames = injector.getInstance(AttributeNames.class);
   }
 
   @Override
@@ -48,7 +47,7 @@ public class RouterFilterChain implements FilterChain
   {
    
     // we get the servlet instance from the request
-    HttpServlet servlet = (HttpServlet) servReq.getAttribute(SERVLET_INSTANCE_KEY);
+    HttpServlet servlet = (HttpServlet) servReq.getAttribute(_attributeNames.getServletInstanceKey());
     
     // if none we istanciate and inject values
     if(servlet == null) {
@@ -57,11 +56,11 @@ public class RouterFilterChain implements FilterChain
       // we inject headers and parameters
       injectRequestParams(servlet, (HttpServletRequest) servReq);
       
-      servReq.setAttribute(SERVLET_INSTANCE_KEY, servlet);
+      servReq.setAttribute(_attributeNames.getServletInstanceKey(), servlet);
     }
     
     // we get the list of filters from the request
-    List<Filter> workingFilterList = (List<Filter>)servReq.getAttribute(WORKING_FILTER_LIST_KEY);
+    List<Filter> workingFilterList = (List<Filter>)servReq.getAttribute(_attributeNames.getWorkingFilterListKey());
     
     if (workingFilterList == null) {
       
@@ -79,14 +78,14 @@ public class RouterFilterChain implements FilterChain
         workingFilterList.add(filter);
       }
       
-      servReq.setAttribute(WORKING_FILTER_LIST_KEY, workingFilterList);
+      servReq.setAttribute(_attributeNames.getWorkingFilterListKey(), workingFilterList);
     }
     
     if (!workingFilterList.isEmpty()) {
       _log.fine("Working filter has: " + workingFilterList.size() + " elements");
 
       Filter filter = (Filter)workingFilterList.remove(0);
-      servReq.setAttribute(WORKING_FILTER_LIST_KEY, workingFilterList);
+      servReq.setAttribute(_attributeNames.getWorkingFilterListKey(), workingFilterList);
       
       // updates the attributes
       injectAttributes(filter, (HttpServletRequest) servReq);
@@ -95,7 +94,7 @@ public class RouterFilterChain implements FilterChain
       filter.doFilter(servReq, servResp, this);
     } else {
       _log.fine("No more filters to process, serving the servlet");
-      servReq.setAttribute(WORKING_FILTER_LIST_KEY, null);
+      servReq.setAttribute(_attributeNames.getWorkingFilterListKey(), null);
       
       // updates the attributes
       injectAttributes(servlet, (HttpServletRequest) servReq);
@@ -141,7 +140,7 @@ public class RouterFilterChain implements FilterChain
     
     Class<?> clazz = obj.getClass();
     
-    Map<String, String> routeParamMap = (Map<String, String>) req.getAttribute(ROUTE_PARAM_MAP_KEY);
+    Map<String, String> routeParamMap = (Map<String, String>) req.getAttribute(_attributeNames.getRouteParamMapKey());
       
     for(Field field : clazz.getDeclaredFields()) {
       
