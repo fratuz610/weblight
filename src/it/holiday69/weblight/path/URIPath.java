@@ -75,7 +75,9 @@ public class URIPath
         log.finer("Positive match for " + actualToken + " by " + pathMatcher.getClass());
 
         if (pathMatcher.mustBeLast()) {
-          actualToken = actualToken + "/" + cursorPath;
+          if(!"".equals(cursorPath))
+            actualToken = actualToken + "/" + cursorPath;
+            
           cursorPath = "";
           log.finer("mustBeLast: actualToken: '" + actualToken + "'");
         }

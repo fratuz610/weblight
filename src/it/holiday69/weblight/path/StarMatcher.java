@@ -1,8 +1,8 @@
 package it.holiday69.weblight.path;
 
-public class StarMatcher
-  implements PathMatcher
+public class StarMatcher implements PathMatcher
 {
+  
   @Override
   public boolean matches(String token)
   {
@@ -12,7 +12,7 @@ public class StarMatcher
   @Override
   public IntRouteParam getInjectParam(String value)
   {
-    return null;
+    return new IntRouteParam("__route_star__", value);
   }
 
   @Override

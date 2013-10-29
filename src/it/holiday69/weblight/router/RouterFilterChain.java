@@ -7,6 +7,7 @@ import it.holiday69.weblight.anno.ReqParam;
 import it.holiday69.weblight.anno.RouteParam;
 import it.holiday69.weblight.anno.Attribute;
 import it.holiday69.weblight.anno.RawInput;
+import it.holiday69.weblight.anno.RouteStarParam;
 import it.holiday69.weblight.model.AttributeNames;
 import it.holiday69.weblight.repackaged.StringUtils;
 import it.holiday69.weblight.utils.IOHelper;
@@ -199,6 +200,17 @@ public class RouterFilterChain implements FilterChain
           assignField(obj, field, paramValue);
         
       }
+      
+      // route star param
+      if(field.isAnnotationPresent(RouteStarParam.class)) {
+        
+        String paramValue = routeParamMap.get("__route_star__");
+        
+        // if we have a param with matching name
+        if(paramValue != null)
+          assignField(obj, field, paramValue);
+      }
+      
       
       // raw request parameter
       if(field.isAnnotationPresent(RawInput.class)) {
